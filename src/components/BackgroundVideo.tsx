@@ -44,12 +44,14 @@ export const BackgroundVideo: React.FC<BackgroundVideoProps> = ({
   // Responsive target offsets:
   // - On Career: character moves to the right (+right)
   // - On Skills: character moves to the left towards the Skills title (+left)
+  // - On Phone (< 768px): movement feature removed (stays centered: 0, 0)
+  // - On Tablet & Desktop (>= 768px): movement feature kept intact
   const getOffsets = (w: number) => {
     if (w >= 1536) return { right: w * 0.22, left: -w * 0.145 }; // Large/4K desktop
     if (w >= 1280) return { right: w * 0.20, left: -w * 0.135 }; // Standard desktop
     if (w >= 1024) return { right: w * 0.18, left: -w * 0.12 };  // Laptop/Tablet landscape
     if (w >= 768)  return { right: w * 0.15, left: -w * 0.09 };  // Tablet portrait
-    return { right: w * 0.14, left: -w * 0.07 };                 // Mobile
+    return { right: 0, left: 0 };                                // Phone: movement removed
   };
 
   const width = viewportWidth || 1;
@@ -135,6 +137,9 @@ export const BackgroundVideo: React.FC<BackgroundVideoProps> = ({
   // Continuous 60/120fps smooth cursor tracking RAF loop with zero seek latency
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
+      // Tracking disabled on phones (< 768px), preserved on tablets & desktop (>= 768px)
+      if ((window.innerWidth || 0) < 768) return;
+
       lastMousePosRef.current = { x: e.clientX, y: e.clientY };
       const w = window.innerWidth || 1;
       const offset = translateXRef.current || 0;
@@ -143,6 +148,9 @@ export const BackgroundVideo: React.FC<BackgroundVideoProps> = ({
     };
 
     const handleTouchMove = (e: TouchEvent) => {
+      // Touch tracking disabled on phones (< 768px), preserved on tablets (>= 768px)
+      if ((window.innerWidth || 0) < 768) return;
+
       if (e.touches[0]) {
         lastMousePosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
         const w = window.innerWidth || 1;
@@ -169,7 +177,10 @@ export const BackgroundVideo: React.FC<BackgroundVideoProps> = ({
     window.addEventListener('mouseleave', handleMouseLeave);
 
     const tick = () => {
-      if (lastMousePosRef.current) {
+      if ((window.innerWidth || 0) < 768) {
+        // Phone: gaze fixed to neutral forward center (frame 48)
+        targetRatioRef.current = 0.5;
+      } else if (lastMousePosRef.current) {
         const w = window.innerWidth || 1;
         const offset = translateXRef.current || 0;
         targetRatioRef.current = Math.max(0, Math.min(1, (lastMousePosRef.current.x - offset) / w));
