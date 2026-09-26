@@ -1,0 +1,89 @@
+import React, { useEffect, useRef, useState } from 'react';
+
+const SPOTLIGHT_R = 260;
+
+interface RevealLayerProps {
+  image: string;
+  cursorX: number;
+  cursorY: number;
+}
+
+export const RevealLayer: React.FC<RevealLayerProps> = ({
+  image,
+  cursorX,
+  cursorY,
+}) => {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [maskData, setMaskData] = useState<string>('');
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const handleResize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const w = canvas.width;
+    const h = canvas.height;
+    if (w === 0 || h === 0) return;
+
+    ctx.clearRect(0, 0, w, h);
+
+    if (cursorX > -500 && cursorY > -500) {
+      const grad = ctx.createRadialGradient(
+        cursorX,
+        cursorY,
+        0,
+        cursorX,
+        cursorY,
+        SPOTLIGHT_R
+      );
+      grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+      grad.addColorStop(0.4, 'rgba(255, 255, 255, 1)');
+      grad.addColorStop(0.6, 'rgba(255, 255, 255, 0.75)');
+      grad.addColorStop(0.75, 'rgba(255, 255, 255, 0.4)');
+      grad.addColorStop(0.88, 'rgba(255, 255, 255, 0.12)');
+      grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(cursorX, cursorY, SPOTLIGHT_R, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    setMaskData(canvas.toDataURL());
+  }, [cursorX, cursorY]);
+
+  return (
+    <>
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 pointer-events-none"
+        style={{ display: 'none' }}
+      />
+      <div
+        className="fixed inset-0 bg-center bg-cover bg-no-repeat z-30 pointer-events-none"
+        style={{
+          backgroundImage: `url("${image}")`,
+          maskImage: maskData ? `url("${maskData}")` : 'none',
+          WebkitMaskImage: maskData ? `url("${maskData}")` : 'none',
+          maskSize: '100% 100%',
+          WebkitMaskSize: '100% 100%',
+        }}
+      />
+    </>
+  );
+};
